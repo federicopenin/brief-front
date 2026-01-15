@@ -3,7 +3,29 @@ import type {
   PsdUploadResponse,
   PsdModifyResponse,
   EditFullResponse,
+  DownloadFormat,
+  DownloadUrls,
 } from "@/types";
+
+export function getPreviewUrl(filename: string): string {
+  return `${API_BASE_URL}/psd/preview/${filename}`;
+}
+
+export function getDownloadUrls(filename: string): DownloadUrls {
+  return {
+    psd: `${API_BASE_URL}/psd/download/${filename}`,
+    png: `${API_BASE_URL}/psd/download/${filename}/png`,
+    pdf: `${API_BASE_URL}/psd/download/${filename}/pdf`,
+  };
+}
+
+export function getDownloadUrl(
+  filename: string,
+  format: DownloadFormat = "psd"
+): string {
+  const urls = getDownloadUrls(filename);
+  return urls[format];
+}
 
 export async function uploadPsd(file: File): Promise<PsdUploadResponse> {
   const formData = new FormData();

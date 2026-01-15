@@ -2,10 +2,19 @@
 
 import { useState, useMemo, useRef } from "react";
 import { flattenLayers } from "@/lib/psd-helpers";
-import { modifyLayer, replaceLogo } from "@/services/psd.service";
+import {
+  modifyLayer,
+  replaceLogo,
+  getDownloadUrls,
+} from "@/services/psd.service";
 import { LayerCard } from "./LayerCard";
 import { BackIcon, UploadFileIcon, SpinnerIcon } from "./icons";
-import type { PsdUploadResponse, PsdModifyResponse, FlatLayer } from "@/types";
+import type {
+  PsdUploadResponse,
+  PsdModifyResponse,
+  FlatLayer,
+  DownloadUrls,
+} from "@/types";
 
 interface LayerModifierProps {
   data: PsdUploadResponse;
@@ -18,7 +27,7 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +44,7 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
     if (!selectedLayerId || !prompt.trim()) return;
 
     setStatus("loading");
-    setDownloadUrl(null);
+    setDownloadUrls(null);
 
     try {
       let result: PsdModifyResponse;
@@ -52,7 +61,7 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
       }
 
       setStatus("success");
-      setDownloadUrl(result.downloadUrl);
+      setDownloadUrls(getDownloadUrls(result.modifiedFilename));
     } catch (e) {
       console.error(e);
       setStatus("error");
@@ -178,15 +187,31 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
               </div>
             </div>
 
-            <div className="w-full md:w-auto flex flex-col gap-2 min-w-[200px]">
-              {status === "success" && downloadUrl ? (
-                <a
-                  href={downloadUrl}
-                  className="w-full py-2.5 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20"
-                  download
-                >
-                  Download Result
-                </a>
+            <div className="w-full md:w-auto flex flex-col gap-2 min-w-[280px]">
+              {status === "success" && downloadUrls ? (
+                <div className="flex gap-2">
+                  <a
+                    href={downloadUrls.psd}
+                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20 text-sm"
+                    download
+                  >
+                    PSD
+                  </a>
+                  <a
+                    href={downloadUrls.png}
+                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 text-sm"
+                    download
+                  >
+                    PNG
+                  </a>
+                  <a
+                    href={downloadUrls.pdf}
+                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20 text-sm"
+                    download
+                  >
+                    PDF
+                  </a>
+                </div>
               ) : (
                 <button
                   onClick={handleSubmit}
