@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface MenuItem {
@@ -105,12 +106,22 @@ interface SidebarProps {
 
 export default function Sidebar({ className }: SidebarProps) {
   const [activeItem, setActiveItem] = useState("new-processing");
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    router.push("/login");
+  };
 
   return (
     <aside
       className={cn(
         "fixed left-0 top-0 h-full w-64 bg-zinc-950/80 backdrop-blur-2xl border-r border-zinc-800/50 flex flex-col z-40",
-        className
+        className,
       )}
     >
       <div className="p-6 border-b border-zinc-800/50">
@@ -153,8 +164,8 @@ export default function Sidebar({ className }: SidebarProps) {
                 isActive
                   ? "bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-white border border-cyan-500/30"
                   : item.disabled
-                  ? "text-zinc-500"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    ? "text-zinc-500"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50",
               )}
             >
               <span
@@ -162,7 +173,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   "transition-all duration-200",
                   isActive
                     ? "text-cyan-400"
-                    : "text-zinc-500 group-hover:text-zinc-300"
+                    : "text-zinc-500 group-hover:text-zinc-300",
                 )}
               >
                 {item.icon}
@@ -185,6 +196,25 @@ export default function Sidebar({ className }: SidebarProps) {
             <p className="text-sm text-white font-medium truncate">User</p>
             <p className="text-xs text-zinc-500 truncate">user@account.com</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800/50 transition-all duration-200"
+            title="Logout"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
