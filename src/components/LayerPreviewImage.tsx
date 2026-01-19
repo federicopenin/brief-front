@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { API_BASE_URL } from "@/lib/constants";
 
 interface LayerPreviewImageProps {
   filename: string;
@@ -22,7 +21,7 @@ export function LayerPreviewImage({
 
   return (
     <img
-      src={`${API_BASE_URL}/psd/layer-preview/${filename}/${layerId}`}
+      src={`/api/psd/layer-preview/${filename}/${layerId}`}
       alt={alt}
       className={
         className ||
