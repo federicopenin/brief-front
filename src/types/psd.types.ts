@@ -17,12 +17,12 @@ export interface PsdStructure {
 export interface PsdUploadResponse {
   filename: string;
   structure: PsdStructure;
-  previewUrl: string;
 }
 
 export interface PsdModifyResponse {
   status: string;
-  downloadUrl: string;
+  modifiedFilename: string;
+  message?: string;
 }
 
 export interface EditFullRequest {
@@ -32,7 +32,7 @@ export interface EditFullRequest {
 
 export interface EditFullResponse {
   status: "success" | "error";
-  downloadUrl?: string;
+  modifiedFilename?: string;
   message?: string;
 }
 
@@ -42,4 +42,12 @@ export interface FlatLayer {
   safeName: string;
   type: "text" | "smart_object" | "image" | "group";
   depth: number;
+}
+
+export type DownloadFormat = "psd" | "png" | "pdf";
+
+export interface DownloadUrls {
+  psd: string;
+  png: string;
+  pdf: string;
 }

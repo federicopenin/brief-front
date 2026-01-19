@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { editFullPsd } from "@/services/psd.service";
+import {
+  editFullPsd,
+  getPreviewUrl,
+  getDownloadUrls,
+} from "@/services/psd.service";
 import { BackIcon, SpinnerIcon } from "./icons";
-import type { PsdUploadResponse } from "@/types";
+import type { PsdUploadResponse, DownloadUrls } from "@/types";
 
 interface GenericEditorProps {
   data: PsdUploadResponse;
@@ -15,21 +19,21 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
 
     setStatus("loading");
-    setDownloadUrl(null);
+    setDownloadUrls(null);
     setErrorMessage("");
 
     try {
       const result = await editFullPsd(data.filename, prompt);
-      if (result.status === "success" && result.downloadUrl) {
+      if (result.status === "success" && result.modifiedFilename) {
         setStatus("success");
-        setDownloadUrl(result.downloadUrl);
+        setDownloadUrls(getDownloadUrls(result.modifiedFilename));
       } else {
         setStatus("error");
         setErrorMessage(result.message || "An error occurred");
@@ -43,7 +47,7 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   const handleReset = () => {
     setStatus("idle");
     setPrompt("");
-    setDownloadUrl(null);
+    setDownloadUrls(null);
     setErrorMessage("");
   };
 
@@ -75,15 +79,13 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
               </div>
             </div>
 
-            {data.previewUrl && (
-              <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700">
-                <img
-                  src={data.previewUrl}
-                  alt="PSD Preview"
-                  className="w-full h-64 object-contain bg-gray-100 dark:bg-zinc-800"
-                />
-              </div>
-            )}
+            <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700">
+              <img
+                src={getPreviewUrl(data.filename)}
+                alt="PSD Preview"
+                className="w-full h-64 object-contain bg-gray-100 dark:bg-zinc-800"
+              />
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -106,18 +108,34 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                 </div>
               )}
 
-              {status === "success" && downloadUrl ? (
+              {status === "success" && downloadUrls ? (
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-lg text-sm text-center">
                     Edit completed successfully!
                   </div>
-                  <a
-                    href={downloadUrl}
-                    className="w-full py-3 px-4 rounded-xl text-white font-semibold text-center block bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 transition-all"
-                    download
-                  >
-                    Download Modified PSD
-                  </a>
+                  <div className="grid grid-cols-3 gap-2">
+                    <a
+                      href={downloadUrls.psd}
+                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20 transition-all text-sm"
+                      download
+                    >
+                      PSD
+                    </a>
+                    <a
+                      href={downloadUrls.png}
+                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 transition-all text-sm"
+                      download
+                    >
+                      PNG
+                    </a>
+                    <a
+                      href={downloadUrls.pdf}
+                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20 transition-all text-sm"
+                      download
+                    >
+                      PDF
+                    </a>
+                  </div>
                   <button
                     onClick={handleReset}
                     className="w-full text-sm text-gray-400 underline hover:text-gray-600 text-center"

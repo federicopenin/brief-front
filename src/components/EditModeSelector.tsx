@@ -1,6 +1,7 @@
 "use client";
 
 import { BackIcon } from "./icons";
+import { getPreviewUrl } from "@/services/psd.service";
 import type { PsdUploadResponse } from "@/types";
 
 interface EditModeSelectorProps {
@@ -39,15 +40,13 @@ export default function EditModeSelector({
               </div>
             </div>
 
-            {data.previewUrl && (
-              <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700">
-                <img
-                  src={data.previewUrl}
-                  alt="PSD Preview"
-                  className="w-full h-48 object-contain bg-gray-100 dark:bg-zinc-800"
-                />
-              </div>
-            )}
+            <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700">
+              <img
+                src={getPreviewUrl(data.filename)}
+                alt="PSD Preview"
+                className="w-full h-48 object-contain bg-gray-100 dark:bg-zinc-800"
+              />
+            </div>
 
             <div className="space-y-4">
               <button
