@@ -97,7 +97,7 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={4}
                   className="block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm p-4 resize-none"
-                  placeholder="Describe what you want to change in the PSD... (e.g., 'Replace the text producto nuevo with nuevos productos')"
+                  placeholder="Describe what you want to change in the PSD... (e.g., 'Reemplazá todas las apariciones de 'PRODUCTO NUEVO' por 'NUEVOS PRODUCTOS'.)"
                   disabled={status === "loading" || status === "success"}
                 />
               </div>

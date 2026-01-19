@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { decodeJwt } from "jose";
+
 const AUTH_COOKIE_NAME = "auth_token";
 const publicPaths = ["/login"];
 const apiPaths = ["/api"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (apiPaths.some((path) => pathname.startsWith(path))) {
@@ -21,7 +23,16 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get(AUTH_COOKIE_NAME);
-  const isAuthenticated = !!token?.value;
+  let isAuthenticated = false;
+
+  if (token?.value) {
+    try {
+      const decoded = decodeJwt(token.value);
+      if (decoded.exp && decoded.exp * 1000 > Date.now()) {
+        isAuthenticated = true;
+      }
+    } catch {}
+  }
   const isPublicPath = publicPaths.includes(pathname);
 
   if (!isAuthenticated && !isPublicPath) {

@@ -24,6 +24,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!API_BASE_URL) {
+      return NextResponse.json(
+        { message: "Server misconfiguration: API URL not set" },
+        { status: 500 },
+      );
+    }
+
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: {
@@ -42,6 +49,13 @@ export async function POST(request: Request) {
 
     const data = await response.json();
     const { accessToken, user } = data;
+
+    if (!accessToken || typeof accessToken !== "string" || !user) {
+      return NextResponse.json(
+        { message: "Invalid response from authentication server" },
+        { status: 502 },
+      );
+    }
 
     const cookieStore = await cookies();
     cookieStore.set(AUTH_COOKIE_NAME, accessToken, COOKIE_OPTIONS);
