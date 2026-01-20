@@ -45,6 +45,14 @@ export function getDownloadUrls(filename: string): DownloadUrls {
   };
 }
 
+export function getDownloadUrlsFromHistory(historyId: string): DownloadUrls {
+  return {
+    psd: `/api/history/${historyId}`,
+    png: `/api/history/${historyId}/png`,
+    pdf: `/api/history/${historyId}/pdf`,
+  };
+}
+
 export function getDownloadUrl(
   filename: string,
   format: DownloadFormat = "psd",

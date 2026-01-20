@@ -4,10 +4,10 @@ import { useState } from "react";
 import {
   editFullPsd,
   getPreviewUrl,
-  getDownloadUrls,
+  getDownloadUrlsFromHistory,
 } from "@/services/psd.service";
 import { BackIcon, SpinnerIcon } from "./icons";
-import type { PsdUploadResponse, DownloadUrls } from "@/types";
+import type { PsdUploadResponse, DownloadUrls, DownloadFormat } from "@/types";
 
 interface GenericEditorProps {
   data: PsdUploadResponse;
@@ -21,6 +21,8 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   >("idle");
   const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [downloadingFormat, setDownloadingFormat] =
+    useState<DownloadFormat | null>(null);
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
@@ -31,9 +33,9 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
 
     try {
       const result = await editFullPsd(data.filename, prompt);
-      if (result.status === "success" && result.modifiedFilename) {
+      if (result.status === "success" && result.historyId) {
         setStatus("success");
-        setDownloadUrls(getDownloadUrls(result.modifiedFilename));
+        setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
       } else {
         setStatus("error");
         setErrorMessage(result.message || "An error occurred");
@@ -49,6 +51,34 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
     setPrompt("");
     setDownloadUrls(null);
     setErrorMessage("");
+  };
+
+  const handleDownload = async (format: DownloadFormat) => {
+    if (!downloadUrls || downloadingFormat) return;
+
+    setDownloadingFormat(format);
+    try {
+      const url = downloadUrls[format];
+      const response = await fetch(url);
+
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${data.filename.replace(".psd", "")}_edited.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download error:", error);
+    } finally {
+      setDownloadingFormat(null);
+    }
   };
 
   return (
@@ -114,27 +144,57 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                     Edit completed successfully!
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <a
-                      href={downloadUrls.psd}
-                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20 transition-all text-sm"
-                      download
+                    <button
+                      onClick={() => handleDownload("psd")}
+                      disabled={downloadingFormat !== null}
+                      className={`py-3 px-4 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                        downloadingFormat === "psd"
+                          ? "bg-purple-600/50 cursor-wait"
+                          : downloadingFormat !== null
+                            ? "bg-purple-600/30 cursor-not-allowed opacity-50"
+                            : "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20"
+                      }`}
                     >
-                      PSD
-                    </a>
-                    <a
-                      href={downloadUrls.png}
-                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 transition-all text-sm"
-                      download
+                      {downloadingFormat === "psd" ? (
+                        <SpinnerIcon className="h-4 w-4" />
+                      ) : (
+                        "PSD"
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDownload("png")}
+                      disabled={downloadingFormat !== null}
+                      className={`py-3 px-4 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                        downloadingFormat === "png"
+                          ? "bg-emerald-600/50 cursor-wait"
+                          : downloadingFormat !== null
+                            ? "bg-emerald-600/30 cursor-not-allowed opacity-50"
+                            : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20"
+                      }`}
                     >
-                      PNG
-                    </a>
-                    <a
-                      href={downloadUrls.pdf}
-                      className="py-3 px-4 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20 transition-all text-sm"
-                      download
+                      {downloadingFormat === "png" ? (
+                        <SpinnerIcon className="h-4 w-4" />
+                      ) : (
+                        "PNG"
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDownload("pdf")}
+                      disabled={downloadingFormat !== null}
+                      className={`py-3 px-4 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                        downloadingFormat === "pdf"
+                          ? "bg-rose-600/50 cursor-wait"
+                          : downloadingFormat !== null
+                            ? "bg-rose-600/30 cursor-not-allowed opacity-50"
+                            : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20"
+                      }`}
                     >
-                      PDF
-                    </a>
+                      {downloadingFormat === "pdf" ? (
+                        <SpinnerIcon className="h-4 w-4" />
+                      ) : (
+                        "PDF"
+                      )}
+                    </button>
                   </div>
                   <button
                     onClick={handleReset}

@@ -5,7 +5,7 @@ import { flattenLayers } from "@/lib/psd-helpers";
 import {
   modifyLayer,
   replaceLogo,
-  getDownloadUrls,
+  getDownloadUrlsFromHistory,
 } from "@/services/psd.service";
 import { LayerCard } from "./LayerCard";
 import { BackIcon, UploadFileIcon, SpinnerIcon } from "./icons";
@@ -14,6 +14,7 @@ import type {
   PsdModifyResponse,
   FlatLayer,
   DownloadUrls,
+  DownloadFormat,
 } from "@/types";
 
 interface LayerModifierProps {
@@ -29,15 +30,17 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   >("idle");
   const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [downloadingFormat, setDownloadingFormat] =
+    useState<DownloadFormat | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const flatLayers = useMemo(
     () => flattenLayers(data.structure.layers),
-    [data]
+    [data],
   );
 
   const selectedLayer = flatLayers.find(
-    (l: FlatLayer) => l.id === selectedLayerId
+    (l: FlatLayer) => l.id === selectedLayerId,
   );
 
   const handleSubmit = async () => {
@@ -54,14 +57,16 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
           data.filename,
           selectedLayerId,
           prompt,
-          logoFile
+          logoFile,
         );
       } else {
         result = await modifyLayer(data.filename, selectedLayerId, prompt);
       }
 
       setStatus("success");
-      setDownloadUrls(getDownloadUrls(result.modifiedFilename));
+      if (result.historyId) {
+        setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
+      }
     } catch (e) {
       console.error(e);
       setStatus("error");
@@ -71,6 +76,34 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setLogoFile(e.target.files[0]);
+    }
+  };
+
+  const handleDownload = async (format: DownloadFormat) => {
+    if (!downloadUrls || downloadingFormat) return;
+
+    setDownloadingFormat(format);
+    try {
+      const url = downloadUrls[format];
+      const response = await fetch(url);
+
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${data.filename.replace(".psd", "")}_modified.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download error:", error);
+    } finally {
+      setDownloadingFormat(null);
     }
   };
 
@@ -190,27 +223,57 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
             <div className="w-full md:w-auto flex flex-col gap-2 min-w-[280px]">
               {status === "success" && downloadUrls ? (
                 <div className="flex gap-2">
-                  <a
-                    href={downloadUrls.psd}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20 text-sm"
-                    download
+                  <button
+                    onClick={() => handleDownload("psd")}
+                    disabled={downloadingFormat !== null}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                      downloadingFormat === "psd"
+                        ? "bg-purple-600/50 cursor-wait"
+                        : downloadingFormat !== null
+                          ? "bg-purple-600/30 cursor-not-allowed opacity-50"
+                          : "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 shadow-lg shadow-purple-500/20"
+                    }`}
                   >
-                    PSD
-                  </a>
-                  <a
-                    href={downloadUrls.png}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 text-sm"
-                    download
+                    {downloadingFormat === "psd" ? (
+                      <SpinnerIcon className="h-4 w-4" />
+                    ) : (
+                      "PSD"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload("png")}
+                    disabled={downloadingFormat !== null}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                      downloadingFormat === "png"
+                        ? "bg-emerald-600/50 cursor-wait"
+                        : downloadingFormat !== null
+                          ? "bg-emerald-600/30 cursor-not-allowed opacity-50"
+                          : "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20"
+                    }`}
                   >
-                    PNG
-                  </a>
-                  <a
-                    href={downloadUrls.pdf}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20 text-sm"
-                    download
+                    {downloadingFormat === "png" ? (
+                      <SpinnerIcon className="h-4 w-4" />
+                    ) : (
+                      "PNG"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload("pdf")}
+                    disabled={downloadingFormat !== null}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-white font-semibold text-center text-sm flex items-center justify-center gap-2 transition-all ${
+                      downloadingFormat === "pdf"
+                        ? "bg-rose-600/50 cursor-wait"
+                        : downloadingFormat !== null
+                          ? "bg-rose-600/30 cursor-not-allowed opacity-50"
+                          : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-lg shadow-red-500/20"
+                    }`}
                   >
-                    PDF
-                  </a>
+                    {downloadingFormat === "pdf" ? (
+                      <SpinnerIcon className="h-4 w-4" />
+                    ) : (
+                      "PDF"
+                    )}
+                  </button>
                 </div>
               ) : (
                 <button
