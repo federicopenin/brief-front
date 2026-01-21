@@ -23,6 +23,7 @@ export interface PsdModifyResponse {
   status: string;
   modifiedFilename: string;
   message?: string;
+  historyId?: string;
 }
 
 export interface EditFullRequest {
@@ -34,6 +35,7 @@ export interface EditFullResponse {
   status: "success" | "error";
   modifiedFilename?: string;
   message?: string;
+  historyId?: string;
 }
 
 export interface FlatLayer {

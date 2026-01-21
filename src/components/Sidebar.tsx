@@ -1,13 +1,15 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { useRouter } from "next/navigation";
+import { ReactNode } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MenuItem {
   id: string;
   label: string;
   disabled: boolean;
+  href?: string;
   icon: ReactNode;
 }
 
@@ -15,7 +17,8 @@ const SIDEBAR_MENU_ITEMS: MenuItem[] = [
   {
     id: "history",
     label: "History",
-    disabled: true,
+    disabled: false,
+    href: "/history",
     icon: (
       <svg
         className="w-5 h-5"
@@ -56,6 +59,7 @@ const SIDEBAR_MENU_ITEMS: MenuItem[] = [
     id: "new-processing",
     label: "New Processing",
     disabled: false,
+    href: "/new-processing",
     icon: (
       <svg
         className="w-5 h-5"
@@ -100,13 +104,22 @@ const SIDEBAR_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+function getActiveItemFromPath(pathname: string): string {
+  const menuItem = SIDEBAR_MENU_ITEMS.find(
+    (item) => item.href && pathname.startsWith(item.href),
+  );
+  return menuItem?.id ?? "new-processing";
+}
+
 interface SidebarProps {
   className?: string;
 }
 
 export default function Sidebar({ className }: SidebarProps) {
-  const [activeItem, setActiveItem] = useState("new-processing");
   const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const activeItem = getActiveItemFromPath(pathname);
 
   const handleLogout = async () => {
     try {
@@ -156,7 +169,10 @@ export default function Sidebar({ className }: SidebarProps) {
           return (
             <button
               key={item.id}
-              onClick={() => !item.disabled && setActiveItem(item.id)}
+              onClick={() => {
+                if (item.disabled) return;
+                if (item.href) router.push(item.href);
+              }}
               disabled={item.disabled}
               className={cn(
                 "group w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200",
@@ -190,11 +206,15 @@ export default function Sidebar({ className }: SidebarProps) {
       <div className="p-4 border-t border-zinc-800/50">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-zinc-900/50">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white text-sm font-bold">
-            U
+            {user?.email?.charAt(0).toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white font-medium truncate">User</p>
-            <p className="text-xs text-zinc-500 truncate">user@account.com</p>
+            <p className="text-sm text-white font-medium truncate">
+              {user?.email?.split("@")[0] || "User"}
+            </p>
+            <p className="text-xs text-zinc-500 truncate">
+              {user?.email || "user@account.com"}
+            </p>
           </div>
           <button
             onClick={handleLogout}
