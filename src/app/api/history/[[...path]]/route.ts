@@ -68,11 +68,19 @@ async function proxyRequest(
     });
   }
 
-  const data = await response.text();
-  return new NextResponse(data, {
-    status: response.status,
-    headers: responseHeaders,
-  });
+  try {
+    const data = await response.json();
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  } catch {
+    const text = await response.text();
+    return new NextResponse(text, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
 }
 
 export async function GET(

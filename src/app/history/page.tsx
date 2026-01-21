@@ -18,6 +18,7 @@ export default function HistoryPage() {
         setHistory(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load history");
+        console.log(err);
       } finally {
         setLoading(false);
       }
