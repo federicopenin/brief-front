@@ -49,48 +49,43 @@ async function proxyRequest(
     "Content-Type": responseContentType,
   };
 
-  if (responseContentLength) {
-    responseHeaders["Content-Length"] = responseContentLength;
-  }
-
-  if (responseContentDisposition) {
-    responseHeaders["Content-Disposition"] = responseContentDisposition;
-  }
-
+  // 1. STREAMING SOLO PARA BINARIOS (Imágenes/PSD)
   if (
     responseContentType.includes("image") ||
     responseContentType.includes("application/pdf") ||
     responseContentType.includes("application/octet-stream")
   ) {
+    if (responseContentLength) {
+      responseHeaders["Content-Length"] = responseContentLength;
+    }
+    if (responseContentDisposition) {
+      responseHeaders["Content-Disposition"] = responseContentDisposition;
+    }
     return new NextResponse(response.body, {
       status: response.status,
       headers: responseHeaders,
     });
   }
 
+  // 2. PARA EL HISTORIAL (JSON): Limpieza de respuesta
   try {
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    console.log(`[Proxy] Received history response: ${buffer.length} bytes`);
+    const text = buffer.toString("utf-8");
 
-    const text = buffer.toString();
-    const isValidJSON =
-      (text.trim().startsWith("[") && text.trim().endsWith("]")) ||
-      (text.trim().startsWith("{") && text.trim().endsWith("}"));
-
-    if (!isValidJSON) {
-      console.error(
-        "[Proxy] WARNING: Response does not look like valid JSON (truncated?)",
-      );
-      console.error(`[Proxy] Last 50 chars: ${text.slice(-50)}`);
+    try {
+      const json = JSON.parse(text);
+      console.log("[Proxy] Successfully parsed JSON, returning clean response");
+      // Al usar NextResponse.json, Next.js calcula el Content-Length correcto solo
+      return NextResponse.json(json, { status: response.status });
+    } catch (e) {
+      console.error("[Proxy] JSON corrupto recibido del backend:", e);
+      console.error(`[Proxy] Texto recibido (${buffer.length} bytes): ${text}`);
+      // Si el JSON está roto, devolvemos un array vacío para que la UI no explote
+      return NextResponse.json([], { status: response.status });
     }
-
-    return new NextResponse(buffer, {
-      status: response.status,
-      headers: responseHeaders,
-    });
   } catch (error) {
-    console.error("[Proxy] Error buffering response:", error);
+    console.error("[Proxy] Error fatal en proxy:", error);
     return NextResponse.json({ error: "Proxy error" }, { status: 500 });
   }
 }
