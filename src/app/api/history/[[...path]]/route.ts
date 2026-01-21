@@ -69,17 +69,29 @@ async function proxyRequest(
   }
 
   try {
-    const data = await response.json();
-    return NextResponse.json(data, {
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    console.log(`[Proxy] Received history response: ${buffer.length} bytes`);
+
+    const text = buffer.toString();
+    const isValidJSON =
+      (text.trim().startsWith("[") && text.trim().endsWith("]")) ||
+      (text.trim().startsWith("{") && text.trim().endsWith("}"));
+
+    if (!isValidJSON) {
+      console.error(
+        "[Proxy] WARNING: Response does not look like valid JSON (truncated?)",
+      );
+      console.error(`[Proxy] Last 50 chars: ${text.slice(-50)}`);
+    }
+
+    return new NextResponse(buffer, {
       status: response.status,
       headers: responseHeaders,
     });
-  } catch {
-    const text = await response.text();
-    return new NextResponse(text, {
-      status: response.status,
-      headers: responseHeaders,
-    });
+  } catch (error) {
+    console.error("[Proxy] Error buffering response:", error);
+    return NextResponse.json({ error: "Proxy error" }, { status: 500 });
   }
 }
 
