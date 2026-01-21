@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -8,8 +7,11 @@ async function proxyRequest(
   request: NextRequest,
   pathSegments: string[],
 ): Promise<Response> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const cookieHeader = request.headers.get("cookie") || "";
+  const token = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith(`${AUTH_COOKIE_NAME}=`))
+    ?.split("=")[1];
 
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,30 +20,19 @@ async function proxyRequest(
   const path = pathSegments.join("/");
   const url = `${API_BASE_URL}/psd/${path}`;
 
-  const headers: HeadersInit = {
-    Authorization: `Bearer ${token}`,
-  };
+  const headers = new Headers();
+  headers.set("Authorization", `Bearer ${token}`);
 
   const contentType = request.headers.get("content-type");
   if (contentType) {
-    headers["Content-Type"] = contentType;
-  }
-
-  const contentLength = request.headers.get("content-length");
-  if (contentLength) {
-    headers["Content-Length"] = contentLength;
-  }
-
-  let body: BodyInit | null = null;
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    body = request.body;
+    headers.set("Content-Type", contentType);
   }
 
   const response = await fetch(url, {
     method: request.method,
     headers,
-    body,
-    // @ts-expect-error - duplex is not in the types yet but is required for streaming
+    body: request.body,
+    // @ts-expect-error - duplex is required for streaming but not in types yet
     duplex: "half",
   });
 
@@ -54,28 +45,13 @@ async function proxyRequest(
     return res;
   }
 
-  const responseContentType = response.headers.get("content-type") || "";
-
-  if (
-    responseContentType.includes("image") ||
-    responseContentType.includes("application/pdf") ||
-    responseContentType.includes("application/octet-stream")
-  ) {
-    const arrayBuffer = await response.arrayBuffer();
-    return new NextResponse(arrayBuffer, {
-      status: response.status,
-      headers: {
-        "Content-Type": responseContentType,
-        "Content-Disposition":
-          response.headers.get("content-disposition") || "",
-      },
-    });
-  }
-
-  const data = await response.text();
-  return new NextResponse(data, {
+  return new NextResponse(response.body, {
     status: response.status,
-    headers: { "Content-Type": responseContentType },
+    headers: {
+      "Content-Type":
+        response.headers.get("content-type") || "application/octet-stream",
+      "Content-Disposition": response.headers.get("content-disposition") || "",
+    },
   });
 }
 
