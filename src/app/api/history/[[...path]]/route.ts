@@ -57,7 +57,19 @@ async function proxyRequest(
     responseHeaders["Content-Disposition"] = responseContentDisposition;
   }
 
-  return new NextResponse(response.body, {
+  if (
+    responseContentType.includes("image") ||
+    responseContentType.includes("application/pdf") ||
+    responseContentType.includes("application/octet-stream")
+  ) {
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  }
+
+  const data = await response.text();
+  return new NextResponse(data, {
     status: response.status,
     headers: responseHeaders,
   });
