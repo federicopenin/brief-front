@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -8,8 +7,11 @@ async function proxyRequest(
   request: NextRequest,
   pathSegments: string[],
 ): Promise<Response> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const cookieHeader = request.headers.get("cookie") || "";
+  const token = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith(`${AUTH_COOKIE_NAME}=`))
+    ?.split("=")[1];
 
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,9 +22,8 @@ async function proxyRequest(
     ? `${API_BASE_URL}/history/${path}`
     : `${API_BASE_URL}/history`;
 
-  const headers: HeadersInit = {
-    Authorization: `Bearer ${token}`,
-  };
+  const headers = new Headers();
+  headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(url, {
     method: request.method,
@@ -39,27 +40,26 @@ async function proxyRequest(
   }
 
   const responseContentType = response.headers.get("content-type") || "";
+  const responseContentLength = response.headers.get("content-length");
+  const responseContentDisposition = response.headers.get(
+    "content-disposition",
+  );
 
-  if (
-    responseContentType.includes("image") ||
-    responseContentType.includes("application/pdf") ||
-    responseContentType.includes("application/octet-stream")
-  ) {
-    const arrayBuffer = await response.arrayBuffer();
-    return new NextResponse(arrayBuffer, {
-      status: response.status,
-      headers: {
-        "Content-Type": responseContentType,
-        "Content-Disposition":
-          response.headers.get("content-disposition") || "",
-      },
-    });
+  const responseHeaders: HeadersInit = {
+    "Content-Type": responseContentType,
+  };
+
+  if (responseContentLength) {
+    responseHeaders["Content-Length"] = responseContentLength;
   }
 
-  const data = await response.text();
-  return new NextResponse(data, {
+  if (responseContentDisposition) {
+    responseHeaders["Content-Disposition"] = responseContentDisposition;
+  }
+
+  return new NextResponse(response.body, {
     status: response.status,
-    headers: { "Content-Type": responseContentType },
+    headers: responseHeaders,
   });
 }
 
