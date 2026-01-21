@@ -23,25 +23,26 @@ async function proxyRequest(
   };
 
   const contentType = request.headers.get("content-type");
-  if (contentType && !contentType.includes("multipart/form-data")) {
+  if (contentType) {
     headers["Content-Type"] = contentType;
+  }
+
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    headers["Content-Length"] = contentLength;
   }
 
   let body: BodyInit | null = null;
   if (request.method !== "GET" && request.method !== "HEAD") {
-    if (contentType?.includes("multipart/form-data")) {
-      body = await request.formData();
-    } else if (contentType?.includes("application/json")) {
-      body = await request.text();
-    } else {
-      body = await request.arrayBuffer();
-    }
+    body = request.body;
   }
 
   const response = await fetch(url, {
     method: request.method,
     headers,
     body,
+    // @ts-expect-error - duplex is not in the types yet but is required for streaming
+    duplex: "half",
   });
 
   if (response.status === 401) {
