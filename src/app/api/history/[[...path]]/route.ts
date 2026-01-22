@@ -49,7 +49,6 @@ async function proxyRequest(
     "Content-Type": responseContentType,
   };
 
-  // 1. STREAMING SOLO PARA BINARIOS (Imágenes/PSD)
   if (
     responseContentType.includes("image") ||
     responseContentType.includes("application/pdf") ||
@@ -67,7 +66,6 @@ async function proxyRequest(
     });
   }
 
-  // 2. PARA EL HISTORIAL (JSON): Limpieza de respuesta
   try {
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -75,17 +73,11 @@ async function proxyRequest(
 
     try {
       const json = JSON.parse(text);
-      console.log("[Proxy] Successfully parsed JSON, returning clean response");
-      // Al usar NextResponse.json, Next.js calcula el Content-Length correcto solo
       return NextResponse.json(json, { status: response.status });
     } catch (e) {
-      console.error("[Proxy] JSON corrupto recibido del backend:", e);
-      console.error(`[Proxy] Texto recibido (${buffer.length} bytes): ${text}`);
-      // Si el JSON está roto, devolvemos un array vacío para que la UI no explote
       return NextResponse.json([], { status: response.status });
     }
   } catch (error) {
-    console.error("[Proxy] Error fatal en proxy:", error);
     return NextResponse.json({ error: "Proxy error" }, { status: 500 });
   }
 }
