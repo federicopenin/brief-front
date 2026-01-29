@@ -41,3 +41,7 @@ export function getHistoryDownloadUrl(
   }
   return `/api/history/${id}/${format}`;
 }
+
+export function getHistoryPreviewUrl(id: string): string {
+  return `/api/history/${id}/png`;
+}
