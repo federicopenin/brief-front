@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const AUTH_COOKIE_NAME = "auth_token";
 
@@ -17,10 +19,20 @@ async function proxyRequest(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const path = pathSegments.join("/");
-  const url = path
-    ? `${API_BASE_URL}/history/${path}`
-    : `${API_BASE_URL}/history`;
+  const isDownload = pathSegments.length === 2;
+  const [id, format] = pathSegments;
+  const isPsdDownload = isDownload && format === "psd";
+  let url: string;
+
+  if (isPsdDownload) {
+    url = `${API_BASE_URL}/history/${id}/stream/${format}`;
+  } else if (isDownload) {
+    url = `${API_BASE_URL}/history/${id}/${format}`;
+  } else if (pathSegments.length > 0) {
+    url = `${API_BASE_URL}/history/${pathSegments.join("/")}`;
+  } else {
+    url = `${API_BASE_URL}/history`;
+  }
 
   const headers = new Headers();
   headers.set("Authorization", `Bearer ${token}`);
@@ -40,29 +52,29 @@ async function proxyRequest(
   }
 
   const responseContentType = response.headers.get("content-type") || "";
-  const responseContentLength = response.headers.get("content-length");
   const responseContentDisposition = response.headers.get(
     "content-disposition",
   );
-
-  const responseHeaders: HeadersInit = {
-    "Content-Type": responseContentType,
-  };
 
   if (
     responseContentType.includes("image") ||
     responseContentType.includes("application/pdf") ||
     responseContentType.includes("application/octet-stream")
   ) {
-    if (responseContentLength) {
-      responseHeaders["Content-Length"] = responseContentLength;
+    const streamHeaders: HeadersInit = {
+      "Content-Type": responseContentType || "application/octet-stream",
+    };
+
+    if (isPsdDownload) {
+      streamHeaders["Transfer-Encoding"] = "chunked";
     }
     if (responseContentDisposition) {
-      responseHeaders["Content-Disposition"] = responseContentDisposition;
+      streamHeaders["Content-Disposition"] = responseContentDisposition;
     }
-    return new NextResponse(response.body, {
+
+    return new Response(response.body, {
       status: response.status,
-      headers: responseHeaders,
+      headers: streamHeaders,
     });
   }
 

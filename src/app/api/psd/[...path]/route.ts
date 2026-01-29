@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const AUTH_COOKIE_NAME = "auth_token";
 
@@ -18,7 +20,14 @@ async function proxyRequest(
   }
 
   const path = pathSegments.join("/");
-  const url = `${API_BASE_URL}/psd/${path}`;
+
+  const isPsdDownload =
+    pathSegments[0] === "download" &&
+    pathSegments[1]?.toLowerCase().endsWith(".psd");
+
+  const url = isPsdDownload
+    ? `${API_BASE_URL}/psd/stream/${pathSegments[1]}`
+    : `${API_BASE_URL}/psd/${path}`;
 
   const headers = new Headers();
   headers.set("Authorization", `Bearer ${token}`);
@@ -45,13 +54,19 @@ async function proxyRequest(
     return res;
   }
 
-  return new NextResponse(response.body, {
+  const responseHeaders: HeadersInit = {
+    "Content-Type":
+      response.headers.get("content-type") || "application/octet-stream",
+    "Content-Disposition": response.headers.get("content-disposition") || "",
+  };
+
+  if (isPsdDownload) {
+    responseHeaders["Transfer-Encoding"] = "chunked";
+  }
+
+  return new Response(response.body, {
     status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("content-type") || "application/octet-stream",
-      "Content-Disposition": response.headers.get("content-disposition") || "",
-    },
+    headers: responseHeaders,
   });
 }
 
