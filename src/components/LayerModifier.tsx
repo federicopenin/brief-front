@@ -198,17 +198,48 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
         <div className="bg-zinc-950/95 backdrop-blur-xl rounded-[22px] p-6">
           <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-6 items-start md:items-center">
             <div className="flex-1 w-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Modification Brief for{" "}
-                <span className="text-blue-600 font-bold">
-                  {selectedLayer?.name}
-                </span>
-                {selectedLayer?.type === "text" && (
-                  <span className="ml-2 text-xs text-blue-500 font-normal animate-pulse">
-                    (Updating text content)
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Modification Brief for{" "}
+                  <span className="text-blue-600 font-bold">
+                    {selectedLayer?.name}
                   </span>
-                )}
-              </label>
+                  {selectedLayer?.type === "text" && (
+                    <span className="ml-2 text-xs text-blue-500 font-normal animate-pulse">
+                      (Updating text content)
+                    </span>
+                  )}
+                </label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      if (text) setPrompt((prev) => prev + text);
+                    } catch {
+                      console.error("Failed to read clipboard");
+                    }
+                  }}
+                  disabled={status === "success"}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Paste from clipboard"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  Paste
+                </button>
+              </div>
               <div className="relative">
                 <textarea
                   value={prompt}
