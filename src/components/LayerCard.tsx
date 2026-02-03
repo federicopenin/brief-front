@@ -9,6 +9,7 @@ interface LayerCardProps {
   filename: string;
   isSelected: boolean;
   onSelect: (layerId: string) => void;
+  index?: number;
 }
 
 export function LayerCard({
@@ -16,7 +17,10 @@ export function LayerCard({
   filename,
   isSelected,
   onSelect,
+  index = 0,
 }: LayerCardProps) {
+  const loadDelay = Math.floor(index / 3) * 300;
+
   return (
     <div
       onClick={() => onSelect(layer.id)}
@@ -37,6 +41,7 @@ export function LayerCard({
             layerId={layer.id}
             alt={layer.name}
             className="w-full h-full object-contain drop-shadow-sm"
+            loadDelay={loadDelay}
           />
         </div>
         <div className="absolute top-2 left-2">

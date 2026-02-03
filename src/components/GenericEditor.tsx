@@ -20,9 +20,11 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
+  const [editedHistoryId, setEditedHistoryId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [downloadingFormat, setDownloadingFormat] =
     useState<DownloadFormat | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(true);
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
@@ -30,12 +32,14 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
     setStatus("loading");
     setDownloadUrls(null);
     setErrorMessage("");
+    setPreviewLoading(true);
 
     try {
       const result = await editFullPsd(data.filename, prompt);
       if (result.status === "success" && result.historyId) {
         setStatus("success");
         setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
+        setEditedHistoryId(result.historyId);
       } else {
         setStatus("error");
         setErrorMessage(result.message || "An error occurred");
@@ -44,13 +48,6 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
       setStatus("error");
       setErrorMessage(e instanceof Error ? e.message : "An error occurred");
     }
-  };
-
-  const handleReset = () => {
-    setStatus("idle");
-    setPrompt("");
-    setDownloadUrls(null);
-    setErrorMessage("");
   };
 
   const handleDownload = async (format: DownloadFormat) => {
@@ -110,11 +107,49 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
             </div>
 
             <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700">
-              <img
-                src={getPreviewUrl(data.filename)}
-                alt="PSD Preview"
-                className="w-full h-64 object-contain bg-gray-100 dark:bg-zinc-800"
-              />
+              <div className="relative w-full h-64 bg-gray-100 dark:bg-zinc-800">
+                {previewLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-800/50">
+                    <div className="flex items-center gap-3 text-zinc-400">
+                      <svg
+                        className="animate-spin h-6 w-6"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span>Loading preview...</span>
+                    </div>
+                  </div>
+                )}
+                <img
+                  key={editedHistoryId || data.filename}
+                  src={
+                    editedHistoryId
+                      ? `/api/history/${editedHistoryId}/png`
+                      : getPreviewUrl(data.filename)
+                  }
+                  alt="PSD Preview"
+                  className={`w-full h-full object-contain transition-opacity duration-300 ${
+                    previewLoading ? "opacity-0" : "opacity-100"
+                  }`}
+                  onLoad={() => setPreviewLoading(false)}
+                  onError={() => setPreviewLoading(false)}
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -196,12 +231,6 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                       )}
                     </button>
                   </div>
-                  <button
-                    onClick={handleReset}
-                    className="w-full text-sm text-gray-400 underline hover:text-gray-600 text-center"
-                  >
-                    Make another edit
-                  </button>
                 </div>
               ) : (
                 <button
