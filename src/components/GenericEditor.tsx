@@ -6,6 +6,10 @@ import {
   getPreviewUrl,
   getDownloadUrlsFromHistory,
 } from "@/services/psd.service";
+import {
+  getHistoryPresignedDownloadUrl,
+  triggerNativeDownload,
+} from "@/services/b2.service";
 import { BackIcon, SpinnerIcon } from "./icons";
 import type { PsdUploadResponse, DownloadUrls, DownloadFormat } from "@/types";
 
@@ -35,7 +39,11 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
     setPreviewLoading(true);
 
     try {
-      const result = await editFullPsd(data.filename, prompt);
+      const result = await editFullPsd(
+        data.filename,
+        prompt,
+        data.originalFilename,
+      );
       if (result.status === "success" && result.historyId) {
         setStatus("success");
         setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
@@ -51,26 +59,22 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   };
 
   const handleDownload = async (format: DownloadFormat) => {
-    if (!downloadUrls || downloadingFormat) return;
+    if (!editedHistoryId || downloadingFormat) return;
 
     setDownloadingFormat(format);
     try {
-      const url = downloadUrls[format];
-      const response = await fetch(url);
+      // Get presigned URL with correct Content-Disposition from backend
+      const { downloadUrl } = await getHistoryPresignedDownloadUrl(
+        editedHistoryId,
+        format,
+      );
 
-      if (!response.ok) throw new Error("Download failed");
+      // Construct filename: originalFilename_edited.format
+      const baseName = data.originalFilename || data.filename;
+      const downloadName = `${baseName.replace(/\.psd$/i, "")}_edited.${format}`;
 
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${data.filename.replace(".psd", "")}_edited.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(blobUrl);
+      // Trigger native download
+      triggerNativeDownload(downloadUrl, downloadName);
     } catch (error) {
       console.error("Download error:", error);
     } finally {
@@ -101,7 +105,7 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                   Generic Edit
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  {data.filename}
+                  {data.originalFilename}
                 </p>
               </div>
             </div>

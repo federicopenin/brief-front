@@ -16,6 +16,7 @@ export interface PsdStructure {
 
 export interface PsdUploadResponse {
   filename: string;
+  originalFilename?: string;
   structure: PsdStructure;
 }
 

@@ -7,6 +7,10 @@ import {
   replaceLogo,
   getDownloadUrlsFromHistory,
 } from "@/services/psd.service";
+import {
+  getHistoryPresignedDownloadUrl,
+  triggerNativeDownload,
+} from "@/services/b2.service";
 import { LayerCard } from "./LayerCard";
 import { BackIcon, UploadFileIcon, SpinnerIcon } from "./icons";
 import PreviewModal from "./PreviewModal";
@@ -61,9 +65,15 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
           selectedLayerId,
           prompt,
           logoFile,
+          data.originalFilename,
         );
       } else {
-        result = await modifyLayer(data.filename, selectedLayerId, prompt);
+        result = await modifyLayer(
+          data.filename,
+          selectedLayerId,
+          prompt,
+          data.originalFilename,
+        );
       }
 
       setStatus("success");
@@ -84,26 +94,22 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   };
 
   const handleDownload = async (format: DownloadFormat) => {
-    if (!downloadUrls || downloadingFormat) return;
+    if (!editedHistoryId || downloadingFormat) return;
 
     setDownloadingFormat(format);
     try {
-      const url = downloadUrls[format];
-      const response = await fetch(url);
+      // Get presigned URL with correct Content-Disposition from backend
+      const { downloadUrl } = await getHistoryPresignedDownloadUrl(
+        editedHistoryId,
+        format,
+      );
 
-      if (!response.ok) throw new Error("Download failed");
+      // Construct filename: originalFilename_modified.format
+      const baseName = data.originalFilename || data.filename;
+      const downloadName = `${baseName.replace(/\.psd$/i, "")}_modified.${format}`;
 
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${data.filename.replace(".psd", "")}_modified.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(blobUrl);
+      // Trigger native download
+      triggerNativeDownload(downloadUrl, downloadName);
     } catch (error) {
       console.error("Download error:", error);
     } finally {

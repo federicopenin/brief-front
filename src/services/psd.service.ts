@@ -77,6 +77,7 @@ export async function modifyLayer(
   filename: string,
   layerId: string,
   prompt: string,
+  originalFilename?: string,
 ): Promise<PsdModifyResponse> {
   const response = await fetch("/api/psd/modify", {
     method: "POST",
@@ -87,6 +88,7 @@ export async function modifyLayer(
       filename,
       layerId,
       prompt,
+      originalFilename,
     }),
   });
 
@@ -98,12 +100,16 @@ export async function replaceLogo(
   layerId: string,
   brief: string,
   logo: File,
+  originalFilename?: string,
 ): Promise<PsdModifyResponse> {
   const formData = new FormData();
   formData.append("filename", filename);
   formData.append("layerId", layerId);
   formData.append("brief", brief);
   formData.append("logo", logo);
+  if (originalFilename) {
+    formData.append("originalFilename", originalFilename);
+  }
 
   const response = await fetch("/api/psd/replace-logo", {
     method: "POST",
@@ -116,6 +122,7 @@ export async function replaceLogo(
 export async function editFullPsd(
   filename: string,
   prompt: string,
+  originalFilename?: string,
 ): Promise<EditFullResponse> {
   const response = await fetch("/api/psd/edit-full", {
     method: "POST",
@@ -125,6 +132,7 @@ export async function editFullPsd(
     body: JSON.stringify({
       filename,
       prompt,
+      originalFilename,
     }),
   });
 

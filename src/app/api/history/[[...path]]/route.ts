@@ -101,3 +101,47 @@ export async function GET(
   const { path } = await params;
   return proxyRequest(request, path || []);
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ path?: string[] }> },
+) {
+  const { path } = await params;
+  const pathSegments = path || [];
+
+  const cookieHeader = request.headers.get("cookie") || "";
+  const token = cookieHeader
+    .split(";")
+    .find((c) => c.trim().startsWith(`${AUTH_COOKIE_NAME}=`))
+    ?.split("=")[1];
+
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = `${API_BASE_URL}/history/${pathSegments.join("/")}`;
+
+  const headers = new Headers();
+  headers.set("Authorization", `Bearer ${token}`);
+  headers.set("Content-Type", "application/json");
+
+  const body = await request.text();
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  if (response.status === 401) {
+    const res = NextResponse.json(
+      { error: "Session expired" },
+      { status: 401 },
+    );
+    res.cookies.delete(AUTH_COOKIE_NAME);
+    return res;
+  }
+
+  const json = await response.json();
+  return NextResponse.json(json, { status: response.status });
+}

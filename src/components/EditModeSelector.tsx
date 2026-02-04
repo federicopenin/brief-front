@@ -35,7 +35,7 @@ export default function EditModeSelector({
                   Choose Edit Mode
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  {data.filename}
+                  {data.originalFilename}
                 </p>
               </div>
             </div>

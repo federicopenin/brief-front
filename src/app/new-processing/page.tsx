@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import FileUploader from "@/components/FileUploader";
+import FileUploaderB2 from "@/components/FileUploaderB2";
 import EditModeSelector from "@/components/EditModeSelector";
 import LayerModifier from "@/components/LayerModifier";
 import GenericEditor from "@/components/GenericEditor";
@@ -39,7 +39,7 @@ export default function NewProcessingPage() {
 
           <div className="relative">
             {step === "upload" && (
-              <FileUploader onUploadSuccess={handleUploadSuccess} />
+              <FileUploaderB2 onUploadSuccess={handleUploadSuccess} />
             )}
             {step === "select-mode" && psdData && (
               <EditModeSelector
