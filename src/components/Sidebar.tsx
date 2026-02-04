@@ -38,7 +38,8 @@ const SIDEBAR_MENU_ITEMS: MenuItem[] = [
   {
     id: "briefs",
     label: "My Briefs",
-    disabled: true,
+    disabled: false,
+    href: "/briefs",
     icon: (
       <svg
         className="w-5 h-5"
