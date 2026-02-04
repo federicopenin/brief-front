@@ -19,12 +19,16 @@ async function proxyRequest(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const isPresignedUrl = pathSegments.length === 3 && pathSegments[1] === "url";
   const isDownload = pathSegments.length === 2;
   const [id, format] = pathSegments;
   const isPsdDownload = isDownload && format === "psd";
   let url: string;
 
-  if (isPsdDownload) {
+  if (isPresignedUrl) {
+    const [historyId, , urlFormat] = pathSegments;
+    url = `${API_BASE_URL}/history/${historyId}/url/${urlFormat}`;
+  } else if (isPsdDownload) {
     url = `${API_BASE_URL}/history/${id}/stream/${format}`;
   } else if (isDownload) {
     url = `${API_BASE_URL}/history/${id}/${format}`;

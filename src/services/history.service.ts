@@ -1,4 +1,8 @@
-import type { HistoryItem, HistoryDownloadFormat } from "@/types";
+import type {
+  HistoryItem,
+  HistoryDownloadFormat,
+  PresignedUrlResponse,
+} from "@/types";
 import { toast } from "sonner";
 
 class SessionExpiredError extends Error {
@@ -44,4 +48,15 @@ export function getHistoryDownloadUrl(
 
 export function getHistoryPreviewUrl(id: string): string {
   return `/api/history/${id}/png`;
+}
+
+export async function getPresignedDownloadUrl(
+  id: string,
+  format: HistoryDownloadFormat = "psd",
+): Promise<PresignedUrlResponse> {
+  const response = await fetch(`/api/history/${id}/url/${format}`);
+  return handleResponse<PresignedUrlResponse>(
+    response,
+    "Failed to get download URL",
+  );
 }

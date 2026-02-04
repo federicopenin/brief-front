@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  editFullPsd,
-  getPreviewUrl,
-  getDownloadUrlsFromHistory,
-} from "@/services/psd.service";
+import { editFullPsd, getPreviewUrl } from "@/services/psd.service";
+import { getPresignedDownloadUrl } from "@/services/history.service";
 import { BackIcon, SpinnerIcon } from "./icons";
-import type { PsdUploadResponse, DownloadUrls, DownloadFormat } from "@/types";
+import type { PsdUploadResponse, DownloadFormat } from "@/types";
 
 interface GenericEditorProps {
   data: PsdUploadResponse;
@@ -19,7 +16,6 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [editedHistoryId, setEditedHistoryId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [downloadingFormat, setDownloadingFormat] =
@@ -30,7 +26,7 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
     if (!prompt.trim()) return;
 
     setStatus("loading");
-    setDownloadUrls(null);
+    setEditedHistoryId(null);
     setErrorMessage("");
     setPreviewLoading(true);
 
@@ -38,7 +34,6 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
       const result = await editFullPsd(data.filename, prompt);
       if (result.status === "success" && result.historyId) {
         setStatus("success");
-        setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
         setEditedHistoryId(result.historyId);
       } else {
         setStatus("error");
@@ -51,26 +46,21 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
   };
 
   const handleDownload = async (format: DownloadFormat) => {
-    if (!downloadUrls || downloadingFormat) return;
+    if (!editedHistoryId || downloadingFormat) return;
 
     setDownloadingFormat(format);
     try {
-      const url = downloadUrls[format];
-      const response = await fetch(url);
-
-      if (!response.ok) throw new Error("Download failed");
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const { url, filename } = await getPresignedDownloadUrl(
+        editedHistoryId,
+        format,
+      );
 
       const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${data.filename.replace(".psd", "")}_edited.${format}`;
+      link.href = url;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Download error:", error);
     } finally {
@@ -204,7 +194,7 @@ export default function GenericEditor({ data, onBack }: GenericEditorProps) {
                 </div>
               )}
 
-              {status === "success" && downloadUrls ? (
+              {status === "success" && editedHistoryId ? (
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-lg text-sm text-center">
                     Edit completed successfully!
