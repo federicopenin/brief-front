@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { HistoryItem, HistoryDownloadFormat } from "@/types";
-import { getHistoryDownloadUrl } from "@/services/history.service";
+import { getPresignedDownloadUrl } from "@/services/history.service";
 import { toast } from "sonner";
 import PreviewModal from "./PreviewModal";
 
@@ -54,36 +54,14 @@ export default function HistoryCard({ item }: HistoryCardProps) {
 
     setLoadingFormat(format);
     try {
-      const url = getHistoryDownloadUrl(item.id, format);
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        if (response.status === 503) {
-          try {
-            const errorData = await response.json();
-            if (errorData.message === "STORAGE_LIMIT_EXCEEDED") {
-              toast.error(
-                "Daily download limit reached. Try again later or download from 'New Processing' after editing.",
-                { duration: 5000 },
-              );
-              return;
-            }
-          } catch {}
-        }
-        throw new Error("Download failed");
-      }
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const { url, filename } = await getPresignedDownloadUrl(item.id, format);
 
       const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${item.originalFilename.replace(".psd", "")}.${format}`;
+      link.href = url;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Download failed. Please try again.");

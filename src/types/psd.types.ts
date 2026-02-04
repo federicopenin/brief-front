@@ -53,3 +53,9 @@ export interface DownloadUrls {
   png: string;
   pdf: string;
 }
+
+export interface PresignedUrlResponse {
+  url: string;
+  filename: string;
+  expiresIn: number;
+}

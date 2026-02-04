@@ -2,11 +2,8 @@
 
 import { useState, useMemo, useRef } from "react";
 import { flattenLayers } from "@/lib/psd-helpers";
-import {
-  modifyLayer,
-  replaceLogo,
-  getDownloadUrlsFromHistory,
-} from "@/services/psd.service";
+import { modifyLayer, replaceLogo } from "@/services/psd.service";
+import { getPresignedDownloadUrl } from "@/services/history.service";
 import { LayerCard } from "./LayerCard";
 import { BackIcon, UploadFileIcon, SpinnerIcon } from "./icons";
 import PreviewModal from "./PreviewModal";
@@ -14,7 +11,6 @@ import type {
   PsdUploadResponse,
   PsdModifyResponse,
   FlatLayer,
-  DownloadUrls,
   DownloadFormat,
 } from "@/types";
 
@@ -29,7 +25,6 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [downloadUrls, setDownloadUrls] = useState<DownloadUrls | null>(null);
   const [editedHistoryId, setEditedHistoryId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -50,7 +45,7 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
     if (!selectedLayerId || !prompt.trim()) return;
 
     setStatus("loading");
-    setDownloadUrls(null);
+    setEditedHistoryId(null);
 
     try {
       let result: PsdModifyResponse;
@@ -68,7 +63,6 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
 
       setStatus("success");
       if (result.historyId) {
-        setDownloadUrls(getDownloadUrlsFromHistory(result.historyId));
         setEditedHistoryId(result.historyId);
       }
     } catch (e) {
@@ -84,26 +78,21 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
   };
 
   const handleDownload = async (format: DownloadFormat) => {
-    if (!downloadUrls || downloadingFormat) return;
+    if (!editedHistoryId || downloadingFormat) return;
 
     setDownloadingFormat(format);
     try {
-      const url = downloadUrls[format];
-      const response = await fetch(url);
-
-      if (!response.ok) throw new Error("Download failed");
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const { url, filename } = await getPresignedDownloadUrl(
+        editedHistoryId,
+        format,
+      );
 
       const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${data.filename.replace(".psd", "")}_modified.${format}`;
+      link.href = url;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Download error:", error);
     } finally {
@@ -257,7 +246,7 @@ export default function LayerModifier({ data, onBack }: LayerModifierProps) {
             </div>
 
             <div className="w-full md:w-auto flex flex-col gap-2 min-w-[280px]">
-              {status === "success" && downloadUrls ? (
+              {status === "success" && editedHistoryId ? (
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowPreview(true)}
