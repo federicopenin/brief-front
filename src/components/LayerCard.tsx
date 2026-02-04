@@ -19,8 +19,8 @@ export function LayerCard({
   onSelect,
   index = 0,
 }: LayerCardProps) {
-  const loadDelay = Math.floor(index / 3) * 300;
-
+  //const loadDelay = Math.floor(index / 3) * 300;
+  const loadDelay = index * 1000;
   return (
     <div
       onClick={() => onSelect(layer.id)}
