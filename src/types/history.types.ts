@@ -3,6 +3,7 @@ export interface HistoryItem {
   originalFilename: string;
   createdAt: string;
   expiresAt: string;
+  briefContent?: string | null;
 }
 
 export type HistoryDownloadFormat = "psd" | "png" | "pdf";

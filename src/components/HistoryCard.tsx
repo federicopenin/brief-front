@@ -33,7 +33,7 @@ function isExpiringSoon(expiresAt: string): boolean {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  return new Date(dateString).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -143,7 +143,7 @@ export default function HistoryCard({ item }: HistoryCardProps) {
         </div>
 
         <div
-          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+          className={`text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 ${
             expiringSoon
               ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
               : "bg-zinc-800 text-zinc-400"
@@ -152,6 +152,29 @@ export default function HistoryCard({ item }: HistoryCardProps) {
           {timeRemaining}
         </div>
       </div>
+
+      {item.briefContent && (
+        <div className="mt-3 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+          <div className="flex items-start gap-2">
+            <svg
+              className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+              />
+            </svg>
+            <p className="text-zinc-300 text-sm whitespace-pre-wrap">
+              {item.briefContent}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-4">
         <button
