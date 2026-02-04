@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { layerPreviewQueue } from "@/lib/request-queue";
 
 interface LayerPreviewImageProps {
   filename: string;
@@ -17,10 +18,12 @@ export function LayerPreviewImage({
   className,
   loadDelay = 0,
 }: LayerPreviewImageProps) {
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [error, setError] = useState(false);
-  const [shouldLoad, setShouldLoad] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -41,22 +44,58 @@ export function LayerPreviewImage({
   }, []);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || imageSrc || error || isLoading) return;
 
     const timer = setTimeout(() => {
-      setShouldLoad(true);
+      setIsLoading(true);
+      abortControllerRef.current = new AbortController();
+
+      layerPreviewQueue.enqueue(async () => {
+        try {
+          const response = await fetch(
+            `/api/psd/layer-preview/${filename}/${layerId}`,
+            { signal: abortControllerRef.current?.signal },
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to load layer preview");
+          }
+
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setImageSrc(objectUrl);
+        } catch (err) {
+          if (err instanceof Error && err.name !== "AbortError") {
+            console.error("Layer preview load error:", err);
+            setError(true);
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      });
     }, loadDelay);
 
-    return () => clearTimeout(timer);
-  }, [isVisible, loadDelay]);
+    return () => {
+      clearTimeout(timer);
+      abortControllerRef.current?.abort();
+    };
+  }, [isVisible, filename, layerId, loadDelay, imageSrc, error, isLoading]);
+
+  useEffect(() => {
+    return () => {
+      if (imageSrc) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [imageSrc]);
 
   if (error) return null;
 
   return (
     <div ref={imgRef} className={className || "w-10 h-10"}>
-      {shouldLoad ? (
+      {imageSrc ? (
         <img
-          src={`/api/psd/layer-preview/${filename}/${layerId}`}
+          src={imageSrc}
           alt={alt}
           className="w-full h-full object-contain"
           onError={() => setError(true)}
