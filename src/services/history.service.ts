@@ -2,6 +2,7 @@ import type {
   HistoryItem,
   HistoryDownloadFormat,
   PresignedUrlResponse,
+  PsdUploadResponse,
 } from "@/types";
 import { toast } from "sonner";
 
@@ -58,5 +59,17 @@ export async function getPresignedDownloadUrl(
   return handleResponse<PresignedUrlResponse>(
     response,
     "Failed to get download URL",
+  );
+}
+
+export async function prepareReedit(
+  historyId: string,
+): Promise<PsdUploadResponse> {
+  const response = await fetch(`/api/history/${historyId}/prepare-reedit`, {
+    method: "POST",
+  });
+  return handleResponse<PsdUploadResponse>(
+    response,
+    "Failed to prepare file for re-editing",
   );
 }

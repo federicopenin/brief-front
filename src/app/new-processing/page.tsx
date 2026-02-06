@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import FileUploader from "@/components/FileUploader";
 import EditModeSelector from "@/components/EditModeSelector";
 import LayerModifier from "@/components/LayerModifier";
@@ -10,9 +11,27 @@ import type { PsdUploadResponse } from "@/types";
 
 type AppStep = "upload" | "select-mode" | "layer-edit" | "generic-edit";
 
-export default function NewProcessingPage() {
+function NewProcessingContent() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<AppStep>("upload");
   const [psdData, setPsdData] = useState<PsdUploadResponse | null>(null);
+
+  useEffect(() => {
+    const isReedit = searchParams.get("reedit") === "true";
+    if (isReedit) {
+      const storedData = sessionStorage.getItem("reeditData");
+      if (storedData) {
+        try {
+          const data = JSON.parse(storedData) as PsdUploadResponse;
+          setPsdData(data);
+          setStep("select-mode");
+          sessionStorage.removeItem("reeditData");
+        } catch (e) {
+          console.error("Failed to parse reedit data:", e);
+        }
+      }
+    }
+  }, [searchParams]);
 
   const handleUploadSuccess = (data: PsdUploadResponse) => {
     setPsdData(data);
@@ -65,5 +84,13 @@ export default function NewProcessingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function NewProcessingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <NewProcessingContent />
+    </Suspense>
   );
 }

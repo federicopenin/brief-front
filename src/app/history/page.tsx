@@ -33,7 +33,7 @@ export default function HistoryPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Edit History</h1>
             <p className="text-zinc-400">
-              Your edited PSD files are stored for 24hs
+              Your edited PSD files are stored for 7 days.
             </p>
           </div>
 
