@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import FileUploader from "@/components/FileUploader";
 import EditModeSelector from "@/components/EditModeSelector";
@@ -11,7 +11,7 @@ import type { PsdUploadResponse } from "@/types";
 
 type AppStep = "upload" | "select-mode" | "layer-edit" | "generic-edit";
 
-export default function NewProcessingPage() {
+function NewProcessingContent() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState<AppStep>("upload");
   const [psdData, setPsdData] = useState<PsdUploadResponse | null>(null);
@@ -84,5 +84,13 @@ export default function NewProcessingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function NewProcessingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <NewProcessingContent />
+    </Suspense>
   );
 }
