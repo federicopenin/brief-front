@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { HistoryItem, HistoryDownloadFormat } from "@/types";
-import { getPresignedDownloadUrl } from "@/services/history.service";
+import {
+  getPresignedDownloadUrl,
+  prepareReedit,
+} from "@/services/history.service";
 import { toast } from "sonner";
 import PreviewModal from "./PreviewModal";
 
@@ -43,11 +47,29 @@ function formatDate(dateString: string): string {
 }
 
 export default function HistoryCard({ item }: HistoryCardProps) {
+  const router = useRouter();
   const [loadingFormat, setLoadingFormat] =
     useState<HistoryDownloadFormat | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showReeditConfirm, setShowReeditConfirm] = useState(false);
+  const [reeditLoading, setReeditLoading] = useState(false);
   const expiringSoon = isExpiringSoon(item.expiresAt);
   const timeRemaining = getTimeRemaining(item.expiresAt);
+
+  const handleReedit = async () => {
+    setReeditLoading(true);
+    try {
+      const psdData = await prepareReedit(item.id);
+      sessionStorage.setItem("reeditData", JSON.stringify(psdData));
+      router.push("/new-processing?reedit=true");
+    } catch (error) {
+      console.error("Re-edit error:", error);
+      toast.error("Failed to prepare file for re-editing. Please try again.");
+      setShowReeditConfirm(false);
+    } finally {
+      setReeditLoading(false);
+    }
+  };
 
   const handleDownload = async (format: HistoryDownloadFormat) => {
     if (loadingFormat) return;
@@ -181,6 +203,25 @@ export default function HistoryCard({ item }: HistoryCardProps) {
           </svg>
         </button>
         <button
+          onClick={() => setShowReeditConfirm(true)}
+          className="py-2 px-3 rounded-xl text-white font-medium text-sm flex items-center justify-center transition-all duration-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
+          title="Re-edit"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
+          </svg>
+        </button>
+        <button
           onClick={() => handleDownload("psd")}
           disabled={loadingFormat !== null}
           className={`flex-1 py-2 px-3 rounded-xl text-white font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
@@ -227,6 +268,50 @@ export default function HistoryCard({ item }: HistoryCardProps) {
           filename={item.originalFilename}
           onClose={() => setShowPreview(false)}
         />
+      )}
+
+      {showReeditConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !reeditLoading && setShowReeditConfirm(false)}
+          />
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Re-edit this file?
+            </h3>
+            <p className="text-zinc-400 text-sm mb-6">
+              This will prepare{" "}
+              <span className="text-white font-medium">
+                {item.originalFilename}
+              </span>{" "}
+              for editing.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowReeditConfirm(false)}
+                disabled={reeditLoading}
+                className="flex-1 py-2.5 px-4 rounded-xl text-zinc-300 font-medium text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReedit}
+                disabled={reeditLoading}
+                className="flex-1 py-2.5 px-4 rounded-xl text-white font-medium text-sm bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+              >
+                {reeditLoading ? (
+                  <>
+                    <SpinnerIcon />
+                    Loading...
+                  </>
+                ) : (
+                  "Confirm"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
